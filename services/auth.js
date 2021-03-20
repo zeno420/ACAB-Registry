@@ -65,7 +65,8 @@ async function signin(user){
 
   let code = null;
   let message = null;
-  let accesToken = null;
+  let name = null;
+  let accessToken = null;
 
   const rows = await db.query(`SELECT * FROM members WHERE name=?`, [user.name]);
 
@@ -82,8 +83,8 @@ async function signin(user){
       message = 'Unauthorized';
     } else {
 
-      const name = user.name;
-      accesToken = jwt.sign({ name: user.name }, config.secret, {expiresIn: 86400});
+      name = user.name;
+      accessToken = jwt.sign({ name: user.name }, config.secret, {expiresIn: 86400});
       
       code = '200';
       message = 'OK';
@@ -93,7 +94,8 @@ async function signin(user){
   return {
     code,
     message,
-    accesToken
+    name,
+    accessToken
   }
 }
 
