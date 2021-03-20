@@ -8,24 +8,29 @@ function verifyToken(req){
 
   let code = null;
   var decoded = null;
+  let message = null;
 
   if (!token) {
-    code = '0';
-    decoded = 'No token provided!';
+    code = '401';
+    //decoded = 'No token provided!';
+    message = 'Unauthorized';
   } else {
 
     try {
       decoded = jwt.verify(token, config.secret);
-      code = '1';
+      code = '200';
+      message = 'OK';
     } catch(err) {
-      decoded = err;
-      code = '-1';
+      //decoded = err;
+      code = '401';
+      message = 'Unauthorized';
     }
   }
 
   return {
     code,
-    decoded
+    decoded,
+    message
   }
 
 /*TODO better return: mit name exp undso*/
@@ -35,18 +40,22 @@ function verifyToken(req){
 async function isAdmin(name){
 
   let code = null;
+  let message = null;
   const rows =  await db.query(`SELECT * FROM admins WHERE name=?`, [name]);
 
 /*TODO prüfen ob if korrekt, kein fehlverhlten */
 
   if (rows[0]) {
-    code = '1'; //admin
+    code = '200';
+    message = 'OK';
   } else {
-    code = '-1'; //kein admin
+    code = '403';
+    message = 'Forbidden';
   }
 
   return {
     code,
+    message
   }
 }
 
@@ -54,36 +63,37 @@ async function isAdmin(name){
 async function signin(user){
 
 
-  let message = '';
+  let code = null;
+  let message = null;
   let accesToken = null;
 
   const rows = await db.query(`SELECT * FROM members WHERE name=?`, [user.name]);
 
-  if (!rows) {
-    message = 'invalid login';
-    return {
-      message,
+  if (!rows[0]) {
+    code = '401';
+    message = 'Unauthorized';
+  } else {
+    const dbuser = rows[0];
+
+    var passwordIsValid = bcrypt.compareSync(user.passwd, dbuser.passwd);
+
+    if (!passwordIsValid) {
+      code = '401';
+      message = 'Unauthorized';
+    } else {
+
+      const name = user.name;
+      accesToken = jwt.sign({ name: user.name }, config.secret, {expiresIn: 86400});
+      
+      code = '200';
+      message = 'OK';
     }
   }
-
-  const dbuser = rows[0];
-
-  var passwordIsValid = bcrypt.compareSync(user.passwd, dbuser.passwd);
-
-  if (!passwordIsValid) {
-    message = 'invalid login';
-    return {
-      accesToken,
-      message,
-    }
-  }
-
-  const name = user.name;
-  accesToken = jwt.sign({ name: user.name }, config.secret, {expiresIn: 86400});
 
   return {
-    name,
-    accesToken,
+    code,
+    message,
+    accesToken
   }
 }
 
@@ -93,5 +103,3 @@ module.exports = {
   isAdmin,
   signin,
 }
-
-

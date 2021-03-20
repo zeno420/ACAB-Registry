@@ -8,19 +8,20 @@ const bcrypt = require('bcryptjs');
 async function getRoute(req){
 
   const result = auth.verifyToken(req);
-  let message = null;
+  const message = result.message;
+  const code = result.code;
 
-  if(result.code === '0'){
-    message = 'Missing Token!';
-  } else if(result.code === '-1'){
-    message = 'Unauthorized!';
-  } else if(result.code === '1'){
+  let data = null;
+
+  if(result.code === '200'){
     const rows = await db.query(`SELECT route, timestamp FROM routes WHERE name=?`, [req.query.name]);
-    message = helper.emptyOrRows(rows);
+    data = helper.emptyOrRows(rows);
   }
-
+ 
   return {
+    code,
     message,
+    data
   }
 }
 
@@ -37,41 +38,45 @@ async function createUser(req){
 
   const result = auth.verifyToken(req);
   let message = null;
+  let code = null;
   let is_admin = null;
+  let info = null;
 
-  if(result.code === '0'){
-    message = 'Missing Token!';
-  } else if(result.code === '-1'){
-    message = 'Unauthorized!';
-  } else if(result.code === '1'){
+  message = result.message;
+  code = result.code;
+
+  if(result.code === '200'){
+
     is_admin = await auth.isAdmin(result.decoded.name);
-    if(is_admin.code === '-1'){
-      message = 'Piss off!';
-    } else if(is_admin.code === '1') {
+
+    message = is_admin.message;
+    code = is_admin.code;
+
+    if(is_admin.code === '200'){
       const salt = bcrypt.genSaltSync(10);
       const hash = bcrypt.hashSync(req.body.passwd, salt);
       let db_result = await db.query(`INSERT INTO members (name, passwd) VALUES (?, ?)`, [req.body.name, hash]);
   
       if (db_result.affectedRows) {
-        message = 'User created successfully.';
+        info = 'User created successfully.';
       } else {
-        message = 'Error in creating User!';
+        info = 'Error in creating User!';
       }
 
       db_result = await db.query(`INSERT INTO routes (route, name, timestamp) VALUES ('-1', ?, CURRENT_TIMESTAMP)`, [req.body.name]);
 
       if (db_result.affectedRows) {
-        message = message + ' Route created successfully.';
+        info += ' Route created successfully.';
       } else {
-        message = message + ' Error in creating Route!';
+        info += ' Error in creating Route!';
       }
-    }
-  } else {
-    message = 'unidentified error';
+    }  
   }
 
   return {
+    code,
     message,
+    info
   }
 }
 
@@ -80,26 +85,27 @@ async function updateRoute(req){
 /*TODO update always, also if entry is same, because of timestamp */
 
   const result = auth.verifyToken(req);
-  let message = null;
+  const code = result.code;
+  const message = result.message;
+  let info = null;
 
-  if(result.code === '0'){
-    message = 'Missing Token!';
-  } else if(result.code === '-1'){
-    message = 'Unauthorized!';
-  } else if(result.code === '1'){
+  if(result.code === '200'){
 
     const db_result = await db.query(`UPDATE routes SET route=? WHERE name=?`, [req.body.route, result.decoded.name]);
 
-    message = 'Error in updating route!';
+    info = 'Error in updating route!';
 
     if (db_result.affectedRows) {
-      message = 'Route updated successfully.';
+      info = 'Route updated successfully.';
     }
-  } else {
-    message = 'unidentified error';
   }
 
-  return {message};
+
+  return {
+    code,
+    message,
+    info
+  }
 }
 
 
