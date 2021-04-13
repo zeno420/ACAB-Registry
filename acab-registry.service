@@ -1,0 +1,14 @@
+[Unit]
+Description=Registry service for ACAB P2P Chat
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=zeno
+ExecStart=/home/zeno/.nvm/versions/node/v9.11.2/bin/node /home/zeno/db-api/index.js
+
+[Install]
+WantedBy=multi-user.target
