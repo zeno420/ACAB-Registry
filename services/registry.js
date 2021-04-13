@@ -9,15 +9,20 @@ async function getRoute(req){
 
   const result = auth.verifyToken(req);
   const message = result.message;
-  const code = result.code;
+  let code = result.code;
 
   let data = null;
 
   if(result.code === '200'){
     const rows = await db.query(`SELECT route, timestamp FROM routes WHERE name=?`, [req.query.name]);
     data = helper.emptyOrRows(rows);
+    if(rows[0]){
+      code = '200';
+    } else {
+      code = '404';
+    }
   }
- 
+
   return {
     code,
     message,
@@ -91,7 +96,7 @@ async function updateRoute(req){
 
   if(result.code === '200'){
 
-    const db_result = await db.query(`UPDATE routes SET route=? WHERE name=?`, [req.body.route, result.decoded.name]);
+    const db_result = await db.query(`UPDATE routes SET route=?, timestamp=CURRENT_TIMESTAMP() WHERE name=?`, [req.body.route, result.decoded.name]);
 
     info = 'Error in updating route!';
 
